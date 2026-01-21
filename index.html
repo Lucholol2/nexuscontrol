@@ -42,6 +42,50 @@
         </div>
     </div>
 
+    <div id="modalCuotas" class="modal-meta" style="display:none;" onclick="if(event.target === this) NexusApp.cerrarModal('modalCuotas')">
+        <div class="card-glass p-8 w-full max-w-sm border border-white/10">
+            <h3 class="text-white font-black text-[11px] uppercase mb-6 tracking-widest text-center">Compra en Cuotas</h3>
+            <div class="space-y-4">
+                <input type="text" id="cuotaDesc" placeholder="¿Qué compraste? (Ej: Parlante)" class="input-modern">
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="number" id="cuotaValorIndividual" placeholder="Monto de la cuota" class="input-modern">
+                    <input type="number" id="cuotaCantidad" placeholder="Cant. Cuotas" class="input-modern">
+                </div>
+                <input type="date" id="cuotaFechaInicio" class="input-modern">
+                <select id="cuotaDivisa" class="select-modern">
+                    <option value="ARS">PESOS (ARS)</option>
+                    <option value="USD">DÓLARES (USD)</option>
+                </select>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mt-8">
+                <button onclick="NexusApp.cerrarModal('modalCuotas')" class="btn-secondary-modern">CANCELAR</button>
+                <button onclick="NexusApp.registrarCuotas()" class="btn-main-modern">GENERAR PLAN</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalRecurrente" class="modal-meta" style="display:none;" onclick="if(event.target === this) NexusApp.cerrarModal('modalRecurrente')">
+        <div class="card-glass p-8 w-full max-w-md border border-white/10">
+            <h3 class="text-white font-black text-[11px] uppercase mb-6 tracking-widest text-center">Gastos Mensuales Fijos</h3>
+            <div class="space-y-4 mb-6">
+                <input type="text" id="recDesc" placeholder="Nombre del gasto" class="input-modern">
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="number" id="recMonto" placeholder="Monto mensual" class="input-modern">
+                    <select id="recDivisa" class="select-modern">
+                        <option value="ARS">ARS</option>
+                        <option value="USD">USD</option>
+                    </select>
+                </div>
+                <button onclick="NexusApp.agregarRecurrente()" class="btn-main-modern">ACTIVAR PAGO MENSUAL</button>
+            </div>
+            <div class="border-t border-white/10 pt-4">
+                <p class="text-[9px] font-black text-slate-500 uppercase mb-3 tracking-widest">Suscripciones Activas</p>
+                <div id="listaRecurrentes" class="space-y-2 max-h-48 overflow-y-auto custom-scroll"></div>
+            </div>
+            <button onclick="NexusApp.cerrarModal('modalRecurrente')" class="btn-secondary-modern mt-6">CERRAR PANEL</button>
+        </div>
+    </div>
+
     <div id="modalPagoParcial" class="modal-meta" style="display:none;" onclick="if(event.target === this) NexusApp.cerrarModal('modalPagoParcial')">
         <div class="card-glass p-8 w-full max-w-sm text-center">
             <div class="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -57,7 +101,7 @@
         </div>
     </div>
 
-    <header class="py-5 px-8 border-b border-white/5 bg-black/20 backdrop-blur-md">
+    <header class="py-4 px-8 border-b border-white/5 bg-black/20 backdrop-blur-md">
         <div class="max-w-[1400px] mx-auto flex items-center justify-between">
             <h1 class="text-sm text-white font-black tracking-tighter">NEXUS<span class="text-blue-500">GOLD</span></h1>
             <div class="flex gap-6 sm:gap-10">
@@ -70,8 +114,8 @@
     </header>
 
     <main class="flex-1 overflow-hidden max-w-[1400px] w-full mx-auto p-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
-        <aside class="lg:col-span-4 space-y-4">
-            <div class="card-glass p-6 space-y-4">
+        <aside class="lg:col-span-4 flex flex-col gap-3 overflow-y-auto custom-scroll pr-2">
+            <div class="card-glass p-5 space-y-4 shrink-0">
                 <div class="flex items-center gap-2 mb-2">
                     <div class="w-1 h-3 bg-blue-500 rounded-full"></div>
                     <h3 id="panelTitle" class="text-[10px] font-black uppercase text-white tracking-widest">Nueva Operación</h3>
@@ -93,17 +137,27 @@
                 <button id="btnCancelarEdit" onclick="NexusApp.cancelarEdicion()" class="hidden btn-secondary-modern">DESCARTAR CAMBIOS</button>
             </div>
             
-            <button onclick="NexusApp.abrirModal('modalPrestamo')" class="btn-contactos-modern py-5 shadow-lg">
-                <i class="fas fa-user-friends text-lg"></i>
+            <button onclick="NexusApp.abrirModal('modalPrestamo')" class="btn-contactos-modern py-4 shadow-lg shrink-0">
+                <i class="fas fa-user-friends text-base"></i>
                 <span class="ml-4 font-black text-[10px] uppercase tracking-widest">Directorio de Préstamos</span>
+            </button>
+
+            <button onclick="NexusApp.abrirModal('modalCuotas')" class="btn-cuotas-modern py-4 shadow-lg shrink-0">
+                <i class="fas fa-layer-group text-base"></i>
+                <span class="ml-4 font-black text-[10px] uppercase tracking-widest">Registrar Cuotas</span>
+            </button>
+
+            <button onclick="NexusApp.abrirModalRecurrentes()" class="btn-recurrente-modern py-4 shadow-lg shrink-0">
+                <i class="fas fa-sync-alt text-base"></i>
+                <span class="ml-4 font-black text-[10px] uppercase tracking-widest">Pagos Mensuales</span>
             </button>
         </aside>
 
         <section class="lg:col-span-8 card-glass p-5 flex flex-col overflow-hidden">
             <div class="flex justify-between items-center mb-6 gap-4">
                 <div class="tabs-container-modern">
-                    <button onclick="NexusApp.cambiarTab('movimientos')" id="tab-nav-movimientos" class="tab-btn-modern active">TODO EL HISTORIAL</button>
-                    <button onclick="NexusApp.cambiarTab('prestamos')" id="tab-nav-prestamos" class="tab-btn-modern">DEUDAS ACTIVAS</button>
+                    <button onclick="NexusApp.cambiarTab('hoy')" id="tab-nav-hoy" class="tab-btn-modern">HOY</button>
+                    <button onclick="NexusApp.cambiarTab('movimientos')" id="tab-nav-movimientos" class="tab-btn-modern active">TODO</button>
                 </div>
                 <div class="relative flex-1 max-w-[240px]">
                     <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-[10px] opacity-30"></i>
