@@ -18,23 +18,16 @@
     </div>
 
     <div id="modalPrestamo" class="modal-meta" style="display:none;" onclick="if(event.target === this) NexusApp.cerrarModal('modalPrestamo')">
-        <div class="card-glass p-6 w-full max-w-sm mx-4 border border-white/10 shadow-2xl">
-            <div class="flex items-center gap-3 mb-6">
-                <div class="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
-                    <i class="fas fa-user-plus text-green-400 text-xs"></i>
-                </div>
-                <h3 class="text-white font-black text-[10px] uppercase tracking-[0.2em]">Nuevo Préstamo</h3>
-            </div>
+        <div class="card-glass p-6 w-full max-w-sm border border-white/10">
+            <h3 class="text-white font-black text-[10px] uppercase mb-6 tracking-widest">Nuevo Préstamo</h3>
             <div class="space-y-4">
-                <input type="text" id="presNombre" placeholder="Nombre del contacto" class="input-modern">
-                <div class="grid grid-cols-2 gap-3">
-                    <input type="number" id="presMonto" placeholder="Monto" class="input-modern">
-                    <input type="date" id="presFecha" class="input-modern">
-                </div>
-                <div class="grid grid-cols-2 gap-3">
+                <input type="text" id="presNombre" placeholder="Nombre" class="input-modern">
+                <input type="number" id="presMonto" placeholder="Monto" class="input-modern">
+                <input type="date" id="presFecha" class="input-modern">
+                <div class="grid grid-cols-2 gap-2">
                     <select id="presTipo" class="select-modern">
-                        <option value="ingreso">ME PRESTÓ (Suma caja)</option>
-                        <option value="gasto">LE PRESTÉ (Resta caja)</option>
+                        <option value="ingreso">ME PRESTÓ (+)</option>
+                        <option value="gasto">LE PRESTÉ (-)</option>
                     </select>
                     <select id="presDivisa" class="select-modern">
                         <option value="ARS">ARS</option>
@@ -43,27 +36,27 @@
                 </div>
             </div>
             <div class="grid grid-cols-2 gap-3 mt-8">
-                <button onclick="NexusApp.cerrarModal('modalPrestamo')" class="btn-secondary-modern">DESCARTAR</button>
-                <button onclick="NexusApp.registrarPrestamo()" class="btn-main-modern !py-3">CREAR</button>
+                <button onclick="NexusApp.cerrarModal('modalPrestamo')" class="btn-secondary-modern">CANCELAR</button>
+                <button onclick="NexusApp.registrarPrestamo()" class="btn-main-modern">CREAR</button>
             </div>
         </div>
     </div>
 
     <div id="modalPagoParcial" class="modal-meta" style="display:none;" onclick="if(event.target === this) NexusApp.cerrarModal('modalPagoParcial')">
-        <div class="card-glass p-6 w-full max-w-sm mx-4 text-center">
-            <h3 class="text-white font-black text-[10px] uppercase mb-4 tracking-widest text-blue-400">Registrar Pago / Abono</h3>
-            <p id="pagoParcialInfo" class="text-[12px] font-black mb-4 text-white"></p>
-            <input type="number" id="montoPagoParcial" class="input-modern mb-4 text-center text-lg" placeholder="Monto a abonar">
-            <div class="grid grid-cols-2 gap-3">
-                <button onclick="NexusApp.cerrarModal('modalPagoParcial')" class="btn-secondary-modern">CANCELAR</button>
-                <button onclick="NexusApp.confirmarPagoParcial()" class="btn-main-modern !py-3">CONFIRMAR</button>
+        <div class="card-glass p-6 w-full max-w-sm text-center">
+            <h3 class="text-blue-400 font-black text-[10px] uppercase mb-4">Efectuar Pago</h3>
+            <p id="pagoParcialInfo" class="text-white text-xs mb-4"></p>
+            <input type="number" id="montoPagoParcial" class="input-modern text-center text-lg" placeholder="Monto">
+            <div class="grid grid-cols-2 gap-3 mt-6">
+                <button onclick="NexusApp.cerrarModal('modalPagoParcial')" class="btn-secondary-modern">ATRÁS</button>
+                <button onclick="NexusApp.confirmarPagoParcial()" class="btn-main-modern">CONFIRMAR PAGO</button>
             </div>
         </div>
     </div>
 
-    <header class="header-premium py-3 px-6 shrink-0 border-b border-white/5">
+    <header class="header-premium py-3 px-6 border-b border-white/5">
         <div class="max-w-[1400px] mx-auto flex items-center justify-between">
-            <h1 class="text-md text-white font-black tracking-tighter">NEXUS<span class="text-blue-500">GOLD</span></h1>
+            <h1 class="text-md text-white font-black">NEXUS<span class="text-blue-500">GOLD</span></h1>
             <div class="flex gap-4 sm:gap-8">
                 <div class="text-right"><span class="mini-label text-green-400">CAJA ARS</span><span id="cajaReal" class="mini-value text-green-400">$ 0</span></div>
                 <div class="text-right border-r border-white/10 pr-4"><span class="mini-label text-blue-400">CAJA USD</span><span id="cajaRealUSD" class="mini-value text-blue-400">u$s 0</span></div>
@@ -74,55 +67,43 @@
     </header>
 
     <main class="flex-1 overflow-hidden max-w-[1400px] w-full mx-auto p-3 grid grid-cols-1 lg:grid-cols-12 gap-3">
-        <aside class="lg:col-span-4 flex flex-col gap-3 overflow-y-auto custom-scroll pr-1">
-            <div class="card-glass flex flex-col overflow-hidden">
-                <div class="bg-white/5 p-3 border-b border-white/5 flex justify-between items-center">
-                    <h3 id="panelTitle" class="text-[9px] font-black uppercase tracking-widest text-blue-400">Consola de Registro</h3>
-                    <i class="fas fa-bolt text-blue-500 text-[10px]"></i>
+        <aside class="lg:col-span-4 space-y-3">
+            <div class="card-glass p-4 space-y-3">
+                <h3 id="panelTitle" class="text-[9px] font-black uppercase text-blue-400 tracking-widest">Consola</h3>
+                <input type="text" id="desc" placeholder="Descripción..." class="input-modern">
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="number" id="monto" placeholder="Monto" class="input-modern">
+                    <input type="date" id="fechaManual" class="input-modern">
                 </div>
-                <div class="p-4 space-y-3">
-                    <input type="text" id="desc" placeholder="Concepto..." class="input-modern">
-                    <div class="grid grid-cols-2 gap-2">
-                        <input type="number" id="monto" placeholder="Importe" class="input-modern">
-                        <input type="date" id="fechaManual" class="input-modern">
-                    </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <select id="tipo" class="select-modern"><option value="gasto">SALIDA (-)</option><option value="ingreso">ENTRADA (+)</option></select>
-                        <select id="divisaRegistro" class="select-modern"><option value="ARS">ARS</option><option value="USD">USD</option></select>
-                    </div>
-                    <select id="estadoInicial" class="select-modern">
-                        <option value="pagado">PAGADO (Efectivizado)</option>
-                        <option value="adeudado">PENDIENTE (Deuda)</option>
-                    </select>
-                    <button id="btnGuardar" onclick="NexusApp.guardarRegistro()" class="btn-main-modern">REGISTRAR</button>
-                    <button id="btnCancelarEdit" onclick="NexusApp.cancelarEdicion()" class="hidden btn-secondary-modern">CANCELAR</button>
+                <div class="grid grid-cols-2 gap-2">
+                    <select id="tipo" class="select-modern"><option value="gasto">SALIDA (-)</option><option value="ingreso">ENTRADA (+)</option></select>
+                    <select id="divisaRegistro" class="select-modern"><option value="ARS">ARS</option><option value="USD">USD</option></select>
                 </div>
+                <select id="estadoInicial" class="select-modern">
+                    <option value="pagado">PAGADO (Efectivo)</option>
+                    <option value="adeudado">PENDIENTE (Deuda)</option>
+                </select>
+                <button id="btnGuardar" onclick="NexusApp.guardarRegistro()" class="btn-main-modern">REGISTRAR</button>
+                <button id="btnCancelarEdit" onclick="NexusApp.cancelarEdicion()" class="hidden btn-secondary-modern">CANCELAR</button>
             </div>
-            
             <button onclick="NexusApp.abrirModal('modalPrestamo')" class="btn-contactos-modern py-4">
-                <i class="fas fa-users text-lg text-green-400"></i>
-                <span class="ml-3 font-bold text-[10px] uppercase">Contactos y Préstamos</span>
+                <i class="fas fa-users text-lg"></i>
+                <span class="ml-3 font-bold text-[10px] uppercase">Préstamos / Contactos</span>
             </button>
         </aside>
 
         <section class="lg:col-span-8 card-glass p-3 flex flex-col overflow-hidden">
             <div class="flex justify-between items-center mb-4 gap-4">
                 <div class="tabs-container-modern">
-                    <button onclick="NexusApp.cambiarTab('movimientos')" id="tab-nav-movimientos" class="tab-btn-modern active">TODO</button>
-                    <button onclick="NexusApp.cambiarTab('prestamos')" id="tab-nav-prestamos" class="tab-btn-modern">DEUDAS</button>
+                    <button onclick="NexusApp.cambiarTab('movimientos')" id="tab-nav-movimientos" class="tab-btn-modern active">HISTORIAL</button>
+                    <button onclick="NexusApp.cambiarTab('prestamos')" id="tab-nav-prestamos" class="tab-btn-modern">SOLO DEUDAS</button>
                 </div>
-                <div class="relative flex-1 max-w-[300px]">
-                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-[9px] opacity-30"></i>
-                    <input type="text" id="busqueda" placeholder="Buscar..." class="search-input-modern !py-2">
-                </div>
+                <input type="text" id="busqueda" placeholder="Buscar..." class="search-input-modern !py-2 flex-1 max-w-[200px]">
             </div>
-
             <div id="alertaContenedor" class="mb-3"></div>
-
-            <div id="historial" class="flex-1 space-y-1 overflow-y-auto custom-scroll"></div>
+            <div id="historial" class="flex-1 overflow-y-auto custom-scroll space-y-1"></div>
         </section>
     </main>
-
     <script src="nexus-engine.js"></script>
 </body>
 </html>
