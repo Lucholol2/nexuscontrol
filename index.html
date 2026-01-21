@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Control - Ultra V6.3 Gold</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+    <div class="bg-glow blur-1"></div>
+    <div class="bg-glow blur-2"></div>
+
+    <div id="custom-context-menu" class="context-menu hidden shadow-2xl">
+        <ul id="ctx-list"></ul>
+    </div>
+
+    <div id="modalPrestamo" class="modal-meta" style="display:none;" onclick="if(event.target === this) NexusApp.cerrarModal('modalPrestamo')">
+        <div class="card-glass p-6 w-full max-w-sm mx-4 border border-white/10 shadow-2xl">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
+                    <i class="fas fa-user-plus text-green-400 text-xs"></i>
+                </div>
+                <h3 class="text-white font-black text-[10px] uppercase tracking-[0.2em]">Nuevo Préstamo</h3>
+            </div>
+            <div class="space-y-4">
+                <input type="text" id="presNombre" placeholder="Nombre del contacto" class="input-modern">
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="number" id="presMonto" placeholder="Monto" class="input-modern">
+                    <input type="date" id="presFecha" class="input-modern">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <select id="presTipo" class="select-modern">
+                        <option value="ingreso">ME PRESTÓ (Suma caja)</option>
+                        <option value="gasto">LE PRESTÉ (Resta caja)</option>
+                    </select>
+                    <select id="presDivisa" class="select-modern">
+                        <option value="ARS">ARS</option>
+                        <option value="USD">USD</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mt-8">
+                <button onclick="NexusApp.cerrarModal('modalPrestamo')" class="btn-secondary-modern">DESCARTAR</button>
+                <button onclick="NexusApp.registrarPrestamo()" class="btn-main-modern !py-3">CREAR</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalPagoParcial" class="modal-meta" style="display:none;" onclick="if(event.target === this) NexusApp.cerrarModal('modalPagoParcial')">
+        <div class="card-glass p-6 w-full max-w-sm mx-4 text-center">
+            <h3 class="text-white font-black text-[10px] uppercase mb-4 tracking-widest text-blue-400">Registrar Pago / Abono</h3>
+            <p id="pagoParcialInfo" class="text-[12px] font-black mb-4 text-white"></p>
+            <input type="number" id="montoPagoParcial" class="input-modern mb-4 text-center text-lg" placeholder="Monto a abonar">
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="NexusApp.cerrarModal('modalPagoParcial')" class="btn-secondary-modern">CANCELAR</button>
+                <button onclick="NexusApp.confirmarPagoParcial()" class="btn-main-modern !py-3">CONFIRMAR</button>
+            </div>
+        </div>
+    </div>
+
+    <header class="header-premium py-3 px-6 shrink-0 border-b border-white/5">
+        <div class="max-w-[1400px] mx-auto flex items-center justify-between">
+            <h1 class="text-md text-white font-black tracking-tighter">NEXUS<span class="text-blue-500">GOLD</span></h1>
+            <div class="flex gap-4 sm:gap-8">
+                <div class="text-right"><span class="mini-label text-green-400">CAJA ARS</span><span id="cajaReal" class="mini-value text-green-400">$ 0</span></div>
+                <div class="text-right border-r border-white/10 pr-4"><span class="mini-label text-blue-400">CAJA USD</span><span id="cajaRealUSD" class="mini-value text-blue-400">u$s 0</span></div>
+                <div class="text-right"><span class="mini-label text-red-400">DEUDA ARS</span><span id="deudaARS" class="mini-value text-red-400">$ 0</span></div>
+                <div class="text-right"><span class="mini-label text-red-500">DEUDA USD</span><span id="deudaUSD" class="mini-value text-red-500">u$s 0</span></div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 overflow-hidden max-w-[1400px] w-full mx-auto p-3 grid grid-cols-1 lg:grid-cols-12 gap-3">
+        <aside class="lg:col-span-4 flex flex-col gap-3 overflow-y-auto custom-scroll pr-1">
+            <div class="card-glass flex flex-col overflow-hidden">
+                <div class="bg-white/5 p-3 border-b border-white/5 flex justify-between items-center">
+                    <h3 id="panelTitle" class="text-[9px] font-black uppercase tracking-widest text-blue-400">Consola de Registro</h3>
+                    <i class="fas fa-bolt text-blue-500 text-[10px]"></i>
+                </div>
+                <div class="p-4 space-y-3">
+                    <input type="text" id="desc" placeholder="Concepto..." class="input-modern">
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="number" id="monto" placeholder="Importe" class="input-modern">
+                        <input type="date" id="fechaManual" class="input-modern">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <select id="tipo" class="select-modern"><option value="gasto">SALIDA (-)</option><option value="ingreso">ENTRADA (+)</option></select>
+                        <select id="divisaRegistro" class="select-modern"><option value="ARS">ARS</option><option value="USD">USD</option></select>
+                    </div>
+                    <select id="estadoInicial" class="select-modern">
+                        <option value="pagado">PAGADO (Efectivizado)</option>
+                        <option value="adeudado">PENDIENTE (Deuda)</option>
+                    </select>
+                    <button id="btnGuardar" onclick="NexusApp.guardarRegistro()" class="btn-main-modern">REGISTRAR</button>
+                    <button id="btnCancelarEdit" onclick="NexusApp.cancelarEdicion()" class="hidden btn-secondary-modern">CANCELAR</button>
+                </div>
+            </div>
+            
+            <button onclick="NexusApp.abrirModal('modalPrestamo')" class="btn-contactos-modern py-4">
+                <i class="fas fa-users text-lg text-green-400"></i>
+                <span class="ml-3 font-bold text-[10px] uppercase">Contactos y Préstamos</span>
+            </button>
+        </aside>
+
+        <section class="lg:col-span-8 card-glass p-3 flex flex-col overflow-hidden">
+            <div class="flex justify-between items-center mb-4 gap-4">
+                <div class="tabs-container-modern">
+                    <button onclick="NexusApp.cambiarTab('movimientos')" id="tab-nav-movimientos" class="tab-btn-modern active">TODO</button>
+                    <button onclick="NexusApp.cambiarTab('prestamos')" id="tab-nav-prestamos" class="tab-btn-modern">DEUDAS</button>
+                </div>
+                <div class="relative flex-1 max-w-[300px]">
+                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-[9px] opacity-30"></i>
+                    <input type="text" id="busqueda" placeholder="Buscar..." class="search-input-modern !py-2">
+                </div>
+            </div>
+
+            <div id="alertaContenedor" class="mb-3"></div>
+
+            <div id="historial" class="flex-1 space-y-1 overflow-y-auto custom-scroll"></div>
+        </section>
+    </main>
+
+    <script src="nexus-engine.js"></script>
+</body>
+</html>
