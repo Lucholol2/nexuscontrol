@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nexus Control - Ultra V6.3 Gold</title>
+    <title>Nexus Control - Gold Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
@@ -18,11 +18,11 @@
     </div>
 
     <div id="modalPrestamo" class="modal-meta" style="display:none;" onclick="if(event.target === this) NexusApp.cerrarModal('modalPrestamo')">
-        <div class="card-glass p-6 w-full max-w-sm border border-white/10">
-            <h3 class="text-white font-black text-[10px] uppercase mb-6 tracking-widest">Nuevo Préstamo</h3>
+        <div class="card-glass p-8 w-full max-w-sm border border-white/10">
+            <h3 class="text-white font-black text-[11px] uppercase mb-6 tracking-widest text-center">Gestión de Préstamos</h3>
             <div class="space-y-4">
-                <input type="text" id="presNombre" placeholder="Nombre" class="input-modern">
-                <input type="number" id="presMonto" placeholder="Monto" class="input-modern">
+                <input type="text" id="presNombre" placeholder="Nombre del contacto" class="input-modern">
+                <input type="number" id="presMonto" placeholder="Monto total" class="input-modern">
                 <input type="date" id="presFecha" class="input-modern">
                 <div class="grid grid-cols-2 gap-2">
                     <select id="presTipo" class="select-modern">
@@ -30,78 +30,88 @@
                         <option value="gasto">LE PRESTÉ (-)</option>
                     </select>
                     <select id="presDivisa" class="select-modern">
-                        <option value="ARS">ARS</option>
-                        <option value="USD">USD</option>
+                        <option value="ARS">PESOS (ARS)</option>
+                        <option value="USD">DÓLARES (USD)</option>
                     </select>
                 </div>
             </div>
             <div class="grid grid-cols-2 gap-3 mt-8">
                 <button onclick="NexusApp.cerrarModal('modalPrestamo')" class="btn-secondary-modern">CANCELAR</button>
-                <button onclick="NexusApp.registrarPrestamo()" class="btn-main-modern">CREAR</button>
+                <button onclick="NexusApp.registrarPrestamo()" class="btn-main-modern">CREAR REGISTRO</button>
             </div>
         </div>
     </div>
 
     <div id="modalPagoParcial" class="modal-meta" style="display:none;" onclick="if(event.target === this) NexusApp.cerrarModal('modalPagoParcial')">
-        <div class="card-glass p-6 w-full max-w-sm text-center">
-            <h3 class="text-blue-400 font-black text-[10px] uppercase mb-4">Efectuar Pago</h3>
-            <p id="pagoParcialInfo" class="text-white text-xs mb-4"></p>
-            <input type="number" id="montoPagoParcial" class="input-modern text-center text-lg" placeholder="Monto">
-            <div class="grid grid-cols-2 gap-3 mt-6">
-                <button onclick="NexusApp.cerrarModal('modalPagoParcial')" class="btn-secondary-modern">ATRÁS</button>
-                <button onclick="NexusApp.confirmarPagoParcial()" class="btn-main-modern">CONFIRMAR PAGO</button>
+        <div class="card-glass p-8 w-full max-w-sm text-center">
+            <div class="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-wallet text-blue-400"></i>
+            </div>
+            <h3 class="text-white font-black text-[11px] uppercase mb-2">Confirmar Abono</h3>
+            <p id="pagoParcialInfo" class="text-slate-400 text-[10px] mb-6"></p>
+            <input type="number" id="montoPagoParcial" class="input-modern text-center text-lg font-black" placeholder="0.00">
+            <div class="grid grid-cols-2 gap-3 mt-8">
+                <button onclick="NexusApp.cerrarModal('modalPagoParcial')" class="btn-secondary-modern">VOLVER</button>
+                <button onclick="NexusApp.confirmarPagoParcial()" class="btn-main-modern">LIQUIDAR</button>
             </div>
         </div>
     </div>
 
-    <header class="header-premium py-3 px-6 border-b border-white/5">
+    <header class="py-5 px-8 border-b border-white/5 bg-black/20 backdrop-blur-md">
         <div class="max-w-[1400px] mx-auto flex items-center justify-between">
-            <h1 class="text-md text-white font-black">NEXUS<span class="text-blue-500">GOLD</span></h1>
-            <div class="flex gap-4 sm:gap-8">
-                <div class="text-right"><span class="mini-label text-green-400">CAJA ARS</span><span id="cajaReal" class="mini-value text-green-400">$ 0</span></div>
-                <div class="text-right border-r border-white/10 pr-4"><span class="mini-label text-blue-400">CAJA USD</span><span id="cajaRealUSD" class="mini-value text-blue-400">u$s 0</span></div>
-                <div class="text-right"><span class="mini-label text-red-400">DEUDA ARS</span><span id="deudaARS" class="mini-value text-red-400">$ 0</span></div>
-                <div class="text-right"><span class="mini-label text-red-500">DEUDA USD</span><span id="deudaUSD" class="mini-value text-red-500">u$s 0</span></div>
+            <h1 class="text-sm text-white font-black tracking-tighter">NEXUS<span class="text-blue-500">GOLD</span></h1>
+            <div class="flex gap-6 sm:gap-10">
+                <div class="text-right border-l border-white/5 pl-6"><span class="mini-label text-green-400">EFECTIVO ARS</span><span id="cajaReal" class="mini-value text-green-400">$ 0</span></div>
+                <div class="text-right border-l border-white/5 pl-6"><span class="mini-label text-blue-400">EFECTIVO USD</span><span id="cajaRealUSD" class="mini-value text-blue-400">u$s 0</span></div>
+                <div class="text-right border-l border-white/5 pl-6"><span class="mini-label text-red-400">DEUDAS ARS</span><span id="deudaARS" class="mini-value text-red-400">$ 0</span></div>
+                <div class="text-right border-l border-white/5 pl-6"><span class="mini-label text-red-500">DEUDAS USD</span><span id="deudaUSD" class="mini-value text-red-500">u$s 0</span></div>
             </div>
         </div>
     </header>
 
-    <main class="flex-1 overflow-hidden max-w-[1400px] w-full mx-auto p-3 grid grid-cols-1 lg:grid-cols-12 gap-3">
-        <aside class="lg:col-span-4 space-y-3">
-            <div class="card-glass p-4 space-y-3">
-                <h3 id="panelTitle" class="text-[9px] font-black uppercase text-blue-400 tracking-widest">Consola</h3>
-                <input type="text" id="desc" placeholder="Descripción..." class="input-modern">
-                <div class="grid grid-cols-2 gap-2">
+    <main class="flex-1 overflow-hidden max-w-[1400px] w-full mx-auto p-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <aside class="lg:col-span-4 space-y-4">
+            <div class="card-glass p-6 space-y-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <div class="w-1 h-3 bg-blue-500 rounded-full"></div>
+                    <h3 id="panelTitle" class="text-[10px] font-black uppercase text-white tracking-widest">Nueva Operación</h3>
+                </div>
+                <input type="text" id="desc" placeholder="¿En qué consistió el movimiento?" class="input-modern">
+                <div class="grid grid-cols-2 gap-3">
                     <input type="number" id="monto" placeholder="Monto" class="input-modern">
                     <input type="date" id="fechaManual" class="input-modern">
                 </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <select id="tipo" class="select-modern"><option value="gasto">SALIDA (-)</option><option value="ingreso">ENTRADA (+)</option></select>
-                    <select id="divisaRegistro" class="select-modern"><option value="ARS">ARS</option><option value="USD">USD</option></select>
+                <div class="grid grid-cols-2 gap-3">
+                    <select id="tipo" class="select-modern"><option value="gasto">EGRESO (-)</option><option value="ingreso">INGRESO (+)</option></select>
+                    <select id="divisaRegistro" class="select-modern"><option value="ARS">PESOS ARS</option><option value="USD">DÓLARES USD</option></select>
                 </div>
                 <select id="estadoInicial" class="select-modern">
-                    <option value="pagado">PAGADO (Efectivo)</option>
-                    <option value="adeudado">PENDIENTE (Deuda)</option>
+                    <option value="pagado">PAGADO (Afecta Caja Real)</option>
+                    <option value="adeudado">PENDIENTE (Afecta Deudas)</option>
                 </select>
-                <button id="btnGuardar" onclick="NexusApp.guardarRegistro()" class="btn-main-modern">REGISTRAR</button>
-                <button id="btnCancelarEdit" onclick="NexusApp.cancelarEdicion()" class="hidden btn-secondary-modern">CANCELAR</button>
+                <button id="btnGuardar" onclick="NexusApp.guardarRegistro()" class="btn-main-modern mt-2">REGISTRAR EN NEXUS</button>
+                <button id="btnCancelarEdit" onclick="NexusApp.cancelarEdicion()" class="hidden btn-secondary-modern">DESCARTAR CAMBIOS</button>
             </div>
-            <button onclick="NexusApp.abrirModal('modalPrestamo')" class="btn-contactos-modern py-4">
-                <i class="fas fa-users text-lg"></i>
-                <span class="ml-3 font-bold text-[10px] uppercase">Préstamos / Contactos</span>
+            
+            <button onclick="NexusApp.abrirModal('modalPrestamo')" class="btn-contactos-modern py-5 shadow-lg">
+                <i class="fas fa-user-friends text-lg"></i>
+                <span class="ml-4 font-black text-[10px] uppercase tracking-widest">Directorio de Préstamos</span>
             </button>
         </aside>
 
-        <section class="lg:col-span-8 card-glass p-3 flex flex-col overflow-hidden">
-            <div class="flex justify-between items-center mb-4 gap-4">
+        <section class="lg:col-span-8 card-glass p-5 flex flex-col overflow-hidden">
+            <div class="flex justify-between items-center mb-6 gap-4">
                 <div class="tabs-container-modern">
-                    <button onclick="NexusApp.cambiarTab('movimientos')" id="tab-nav-movimientos" class="tab-btn-modern active">HISTORIAL</button>
-                    <button onclick="NexusApp.cambiarTab('prestamos')" id="tab-nav-prestamos" class="tab-btn-modern">SOLO DEUDAS</button>
+                    <button onclick="NexusApp.cambiarTab('movimientos')" id="tab-nav-movimientos" class="tab-btn-modern active">TODO EL HISTORIAL</button>
+                    <button onclick="NexusApp.cambiarTab('prestamos')" id="tab-nav-prestamos" class="tab-btn-modern">DEUDAS ACTIVAS</button>
                 </div>
-                <input type="text" id="busqueda" placeholder="Buscar..." class="search-input-modern !py-2 flex-1 max-w-[200px]">
+                <div class="relative flex-1 max-w-[240px]">
+                    <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-[10px] opacity-30"></i>
+                    <input type="text" id="busqueda" placeholder="Buscar registros..." class="input-modern !rounded-full !pl-10 !py-2">
+                </div>
             </div>
-            <div id="alertaContenedor" class="mb-3"></div>
-            <div id="historial" class="flex-1 overflow-y-auto custom-scroll space-y-1"></div>
+            <div id="alertaContenedor"></div>
+            <div id="historial" class="flex-1 overflow-y-auto custom-scroll space-y-2 pr-1"></div>
         </section>
     </main>
     <script src="nexus-engine.js"></script>
