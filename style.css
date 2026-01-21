@@ -83,6 +83,34 @@ body {
 }
 .btn-contactos-modern:hover { background: rgba(16, 185, 129, 0.15); border-color: #10b981; }
 
+.btn-cuotas-modern { 
+    background: linear-gradient(135deg, rgba(234, 179, 8, 0.1), rgba(202, 138, 4, 0.1));
+    border: 1px solid rgba(234, 179, 8, 0.2); 
+    width: 100%; 
+    border-radius: 20px; 
+    color: #eab308; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    cursor: pointer;
+    transition: all 0.3s;
+}
+.btn-cuotas-modern:hover { background: rgba(234, 179, 8, 0.15); border-color: #eab308; }
+
+.btn-recurrente-modern { 
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(124, 58, 237, 0.1));
+    border: 1px solid rgba(139, 92, 246, 0.2); 
+    width: 100%; 
+    border-radius: 20px; 
+    color: #a78bfa; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    cursor: pointer;
+    transition: all 0.3s;
+}
+.btn-recurrente-modern:hover { background: rgba(139, 92, 246, 0.15); border-color: #8b5cf6; }
+
 .history-item { 
     padding: 0.9rem 1.2rem; 
     background: rgba(255,255,255,0.01); 
@@ -158,3 +186,7 @@ body {
 .custom-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 
 .hidden { display: none !important; }
+
+aside {
+    max-height: 100%;
+}
