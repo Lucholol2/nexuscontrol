@@ -4,7 +4,8 @@ const NexusApp = {
         tabActual: 'movimientos',
         idActivo: null,
         filtroBusqueda: '',
-        editandoId: null
+        editandoId: null,
+        saldosActuales: { ARS: 0, USD: 0 }
     },
 
     init() {
@@ -70,49 +71,27 @@ const NexusApp = {
         this.dom.ctxMenu.classList.remove('hidden');
     },
 
-    verificarVencimientos() {
-        const hoy = new Date();
-        const mañana = new Date();
-        mañana.setDate(hoy.getDate() + 1);
-        const mañanaISO = mañana.toISOString().split('T')[0];
-
-        const deudasMañana = this.state.movimientos.filter(m => m.estado === 'adeudado' && m.fecha === mañanaISO);
-        
-        if (deudasMañana.length > 0) {
-            let totalARS = deudasMañana.filter(d => d.divisa === 'ARS').reduce((acc, curr) => acc + curr.monto, 0);
-            let totalUSD = deudasMañana.filter(d => d.divisa === 'USD').reduce((acc, curr) => acc + curr.monto, 0);
-
-            this.dom.alertaContenedor.innerHTML = `
-                <div class="alerta-vencimiento animate-pulse shadow-lg shadow-orange-500/10">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-400">
-                            <i class="fas fa-calendar-day"></i>
-                        </div>
-                        <div>
-                            <h4 class="text-[10px] font-black uppercase text-orange-400 tracking-tighter">Atención: Vencimientos para Mañana</h4>
-                            <p class="text-[9px] opacity-70 font-bold">Tienes ${deudasMañana.length} deudas pendientes para el ${mañanaISO.split('-').reverse().join('/')}</p>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-[11px] font-black text-white">${totalARS > 0 ? '$ ' + totalARS.toLocaleString() : ''} ${totalUSD > 0 ? ' u$s ' + totalUSD.toLocaleString() : ''}</p>
-                        <button onclick="NexusApp.cambiarTab('prestamos')" class="text-[8px] font-black uppercase text-orange-400 hover:underline">Ver detalles</button>
-                    </div>
-                </div>
-            `;
-        } else {
-            this.dom.alertaContenedor.innerHTML = '';
-        }
-    },
-
     guardarRegistro() {
         const d = this.dom.desc.value, m = parseFloat(this.dom.monto.value), f = this.dom.fecha.value;
+        const tipo = this.dom.tipo.value, divisa = this.dom.divisa.value, estado = this.dom.estado.value;
+        
         if(!d || isNaN(m) || !f) return;
+
+        // VALIDACIÓN DE SALDO PARA GASTOS PAGADOS
+        if(tipo === 'gasto' && estado === 'pagado') {
+            const saldoDisponible = this.state.saldosActuales[divisa];
+            if(m > saldoDisponible) {
+                alert(`SALDO INSUFICIENTE: Tienes ${saldoDisponible.toLocaleString()} y quieres gastar ${m.toLocaleString()}`);
+                return;
+            }
+        }
+
         if (this.state.editandoId) {
             const idx = this.state.movimientos.findIndex(x => x.id === this.state.editandoId);
-            this.state.movimientos[idx] = { ...this.state.movimientos[idx], desc: d.toUpperCase(), monto: m, tipo: this.dom.tipo.value, divisa: this.dom.divisa.value, estado: this.dom.estado.value, fecha: f };
+            this.state.movimientos[idx] = { ...this.state.movimientos[idx], desc: d.toUpperCase(), monto: m, tipo: tipo, divisa: divisa, estado: estado, fecha: f };
             this.cancelarEdicion();
         } else {
-            this.state.movimientos.push({ id: Date.now(), desc: d.toUpperCase(), monto: m, tipo: this.dom.tipo.value, divisa: this.dom.divisa.value, estado: this.dom.estado.value, fecha: f, esPrestamo: false });
+            this.state.movimientos.push({ id: Date.now(), desc: d.toUpperCase(), monto: m, tipo: tipo, divisa: divisa, estado: estado, fecha: f, esPrestamo: false });
         }
         this.dom.desc.value = ''; this.dom.monto.value = '';
         this.sync();
@@ -122,12 +101,19 @@ const NexusApp = {
         const n = document.getElementById('presNombre').value.toUpperCase();
         const m = parseFloat(document.getElementById('presMonto').value);
         const f = document.getElementById('presFecha').value;
+        const tipo = document.getElementById('presTipo').value;
+        const divisa = document.getElementById('presDivisa').value;
+
         if(!n || isNaN(m)) return;
+
+        if(tipo === 'gasto' && m > this.state.saldosActuales[divisa]) {
+            alert(`Saldo insuficiente en caja para prestar.`);
+            return;
+        }
+
         this.state.movimientos.push({ 
             id: Date.now(), desc: `PRÉSTAMO: ${n}`, contacto: n, monto: m, 
-            tipo: document.getElementById('presTipo').value, 
-            divisa: document.getElementById('presDivisa').value, 
-            estado: 'adeudado', fecha: f, esPrestamo: true 
+            tipo: tipo, divisa: divisa, estado: 'adeudado', fecha: f, esPrestamo: true 
         });
         this.cerrarModal('modalPrestamo');
         this.sync();
@@ -136,47 +122,87 @@ const NexusApp = {
     abrirPagoParcial(id) {
         this.state.idActivo = id;
         const mov = this.state.movimientos.find(m => m.id === id);
-        document.getElementById('pagoParcialInfo').innerText = `${mov.desc} (${mov.divisa} ${mov.monto.toLocaleString()})`;
+        document.getElementById('pagoParcialInfo').innerText = `${mov.desc} (Deuda actual: ${mov.divisa} ${mov.monto.toLocaleString()})`;
         document.getElementById('montoPagoParcial').value = mov.monto;
         this.abrirModal('modalPagoParcial');
     },
 
     confirmarPagoParcial() {
-        const montoPago = parseFloat(document.getElementById('montoPagoParcial').value);
-        const mov = this.state.movimientos.find(m => m.id === this.state.idActivo);
-        if (!mov || isNaN(montoPago)) return;
+        const montoAPagar = parseFloat(document.getElementById('montoPagoParcial').value);
+        const movOriginal = this.state.movimientos.find(m => m.id === this.state.idActivo);
+        
+        if (!movOriginal || isNaN(montoAPagar) || montoAPagar <= 0) return;
 
+        // VALIDACIÓN CRÍTICA: ¿Hay dinero en caja para este abono?
+        // Si la deuda original es un "gasto" pendiente, pagarla requiere "dinero real" (egreso).
+        const saldoEnCaja = this.state.saldosActuales[movOriginal.divisa];
+        if (montoAPagar > saldoEnCaja) {
+            alert(`PAGO RECHAZADO: No hay fondos suficientes en Caja ${movOriginal.divisa}. Disponible: ${saldoEnCaja.toLocaleString()}`);
+            return; // BLOQUEO TOTAL
+        }
+
+        // REGISTRO DEL MOVIMIENTO DE CAJA (EGRESO REAL)
         this.state.movimientos.push({
-            id: Date.now() + 1,
-            desc: `ABONO: ${mov.contacto || mov.desc}`,
-            monto: montoPago,
-            tipo: mov.tipo === 'ingreso' ? 'gasto' : 'ingreso',
-            divisa: mov.divisa,
-            estado: 'pagado',
-            fecha: new Date().toISOString().split('T')[0]
+            id: Date.now() + 1, 
+            desc: `PAGO: ${movOriginal.desc}`, 
+            monto: montoAPagar,
+            tipo: 'gasto', // SIEMPRE ES GASTO PORQUE SALE DINERO DE TU MANO
+            divisa: movOriginal.divisa, 
+            estado: 'pagado', 
+            fecha: new Date().toISOString().split('T')[0],
+            vinculoId: movOriginal.id 
         });
 
-        if (montoPago >= mov.monto) {
-            mov.estado = 'pagado';
-            mov.esPrestamo = false;
-        } else {
-            mov.monto -= montoPago;
+        // ACTUALIZACIÓN DE LA DEUDA
+        if (montoAPagar >= movOriginal.monto) { 
+            movOriginal.monto = 0;
+            movOriginal.estado = 'pagado'; 
+            movOriginal.esPrestamo = false; 
+        } else { 
+            movOriginal.monto -= montoAPagar; 
         }
+
         this.cerrarModal('modalPagoParcial');
+        this.sync();
+    },
+
+    eliminarRegistro() {
+        if(!confirm("¿Eliminar registro?")) return;
+        const movAEliminar = this.state.movimientos.find(m => m.id === this.state.idActivo);
+        
+        if(movAEliminar && movAEliminar.vinculoId) {
+            const deudaPadre = this.state.movimientos.find(m => m.id === movAEliminar.vinculoId);
+            if(deudaPadre) {
+                deudaPadre.monto += movAEliminar.monto;
+                deudaPadre.estado = 'adeudado';
+                if(deudaPadre.desc.includes("PRÉSTAMO")) deudaPadre.esPrestamo = true;
+            }
+        }
+
+        this.state.movimientos = this.state.movimientos.filter(m => m.id !== this.state.idActivo);
         this.sync();
     },
 
     renderStats() {
         let ars = 0, usd = 0, dARS = 0, dUSD = 0;
         this.state.movimientos.forEach(m => {
+            // Dinero Real (Pagado o Préstamos iniciales que mueven caja)
             if (m.estado === 'pagado' || m.esPrestamo) {
-                if (m.divisa === 'ARS') m.tipo === 'ingreso' ? ars += m.monto : ars -= m.monto;
-                else m.tipo === 'ingreso' ? usd += m.monto : usd -= m.monto;
+                if (m.divisa === 'ARS') {
+                    m.tipo === 'ingreso' ? ars += m.monto : ars -= m.monto;
+                } else {
+                    m.tipo === 'ingreso' ? usd += m.monto : usd -= m.monto;
+                }
             }
+            // Deudas (Solo lo que está pendiente)
             if (m.estado === 'adeudado') {
                 if (m.divisa === 'ARS') dARS += m.monto; else dUSD += m.monto;
             }
         });
+        
+        this.state.saldosActuales.ARS = ars;
+        this.state.saldosActuales.USD = usd;
+
         this.dom.cajaARS.innerText = `$ ${ars.toLocaleString()}`;
         this.dom.cajaUSD.innerText = `u$s ${usd.toLocaleString()}`;
         this.dom.deudaARS.innerText = `$ ${dARS.toLocaleString()}`;
@@ -186,17 +212,16 @@ const NexusApp = {
     renderHistorial() {
         let filtrados = this.state.tabActual === 'prestamos' ? this.state.movimientos.filter(m => m.estado === 'adeudado') : this.state.movimientos;
         if (this.state.filtroBusqueda) filtrados = filtrados.filter(m => m.desc.toLowerCase().includes(this.state.filtroBusqueda));
-        
         const hoy = new Date().toISOString().split('T')[0];
         this.dom.historial.innerHTML = filtrados.sort((a,b) => b.fecha.localeCompare(a.fecha) || b.id - a.id).map(m => `
             <div class="history-item ${m.estado === 'adeudado' ? 'item-debt' : 'item-paid'}" data-id="${m.id}">
                 <div>
                     <p class="text-[10px] font-black uppercase flex items-center gap-2">${m.desc} ${m.fecha > hoy ? '<i class="fas fa-clock text-blue-400"></i>' : ''}</p>
-                    <p class="text-[8px] opacity-30 font-bold">${m.fecha.split('-').reverse().join('/')} ${m.estado === 'adeudado' ? '• PENDIENTE' : ''}</p>
+                    <p class="text-[8px] opacity-30 font-bold">${m.fecha.split('-').reverse().join('/')} ${m.estado === 'adeudado' ? '• PENDIENTE' : '• CERRADO'}</p>
                 </div>
                 <div class="flex items-center gap-2">
                     <span class="font-black text-[11px] ${m.tipo === 'ingreso' ? 'text-green-400' : 'text-red-400'}">
-                        ${m.divisa === 'USD' ? 'u$s' : '$'} ${m.monto.toLocaleString()}
+                        ${m.tipo === 'ingreso' ? '+' : '-'} ${m.divisa === 'USD' ? 'u$s' : '$'} ${m.monto.toLocaleString()}
                     </span>
                     <div class="flex gap-1 ml-2 pl-2 border-l border-white/5">
                         <button onclick="NexusApp.prepararEdicion(${m.id})" class="mini-action-btn text-blue-400"><i class="fas fa-edit"></i></button>
@@ -204,9 +229,19 @@ const NexusApp = {
                         <button onclick="NexusApp.state.idActivo=${m.id}; NexusApp.eliminarRegistro()" class="mini-action-btn text-red-400"><i class="fas fa-trash"></i></button>
                     </div>
                 </div>
-            </div>`).join('') || '<div class="opacity-10 py-10 text-center text-xs">SIN DATOS</div>';
+            </div>`).join('') || '<div class="opacity-10 py-10 text-center text-xs">SIN MOVIMIENTOS</div>';
     },
 
+    // ... resto de funciones de UI (prepararEdicion, cancelarEdicion, sync, renderAll, cambiarTab, abrirModal, cerrarModal)
+    verificarVencimientos() {
+        const mañana = new Date(); mañana.setDate(mañana.getDate() + 1);
+        const mañanaISO = mañana.toISOString().split('T')[0];
+        const deudasMañana = this.state.movimientos.filter(m => m.estado === 'adeudado' && m.fecha === mañanaISO);
+        if (deudasMañana.length > 0) {
+            let totalARS = deudasMañana.filter(d => d.divisa === 'ARS').reduce((acc, curr) => acc + curr.monto, 0);
+            this.dom.alertaContenedor.innerHTML = `<div class="alerta-vencimiento animate-pulse"><span class="text-[9px] font-black uppercase text-white">Mañana vencen: $ ${totalARS.toLocaleString()}</span></div>`;
+        } else { this.dom.alertaContenedor.innerHTML = ''; }
+    },
     prepararEdicion(id) {
         const mov = this.state.movimientos.find(m => m.id === id);
         if (!mov) return;
@@ -218,7 +253,6 @@ const NexusApp = {
         this.dom.btnGuardar.innerText = "ACTUALIZAR";
         this.dom.btnCancel.classList.remove('hidden');
     },
-
     cancelarEdicion() {
         this.state.editandoId = null;
         this.dom.panelTitle.innerText = "Consola de Registro";
@@ -226,25 +260,10 @@ const NexusApp = {
         this.dom.btnCancel.classList.add('hidden');
         this.dom.desc.value = ''; this.dom.monto.value = ''; this.setDefaultDate();
     },
-
-    sync() { 
-        localStorage.setItem('nexus_gold_v2_data', JSON.stringify(this.state.movimientos)); 
-        this.renderAll(); 
-    },
-    
-    renderAll() { 
-        this.renderStats(); 
-        this.renderHistorial(); 
-        this.verificarVencimientos();
-    },
-    
-    cambiarTab(t) { 
-        this.state.tabActual = t; 
-        document.querySelectorAll('.tab-btn-modern').forEach(b => b.classList.toggle('active', b.id === `tab-nav-${t}`)); 
-        this.renderAll(); 
-    },
+    sync() { localStorage.setItem('nexus_gold_v2_data', JSON.stringify(this.state.movimientos)); this.renderAll(); },
+    renderAll() { this.renderStats(); this.renderHistorial(); this.verificarVencimientos(); },
+    cambiarTab(t) { this.state.tabActual = t; document.querySelectorAll('.tab-btn-modern').forEach(b => b.classList.toggle('active', b.id === `tab-nav-${t}`)); this.renderAll(); },
     abrirModal(id) { document.getElementById(id).style.display = 'flex'; },
-    cerrarModal(id) { document.getElementById(id).style.display = 'none'; },
-    eliminarRegistro() { if(confirm("¿Eliminar registro?")) { this.state.movimientos = this.state.movimientos.filter(m => m.id !== this.state.idActivo); this.sync(); } }
+    cerrarModal(id) { document.getElementById(id).style.display = 'none'; }
 };
 document.addEventListener('DOMContentLoaded', () => NexusApp.init());
