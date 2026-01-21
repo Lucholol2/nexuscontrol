@@ -1,11 +1,14 @@
 const NexusApp = {
     state: {
         movimientos: [],
+        recurrentes: [], 
         tabActual: 'movimientos',
         idActivo: null,
         filtroBusqueda: '',
         editandoId: null,
-        saldosActuales: { ARS: 0, USD: 0 }
+        saldosActuales: { ARS: 0, USD: 0 },
+        gruposAbiertos: new Set(),
+        diasAbiertos: new Set() // Para el acordeón de fechas
     },
 
     init() {
@@ -13,6 +16,7 @@ const NexusApp = {
         this.loadData();
         this.setDefaultDate();
         this.initListeners();
+        this.procesarRecurrentes();
         this.renderAll();
     },
 
@@ -27,7 +31,8 @@ const NexusApp = {
             ctxMenu: document.getElementById('custom-context-menu'), ctxList: document.getElementById('ctx-list'),
             panelTitle: document.getElementById('panelTitle'), btnGuardar: document.getElementById('btnGuardar'),
             btnCancel: document.getElementById('btnCancelarEdit'),
-            alertaContenedor: document.getElementById('alertaContenedor')
+            alertaContenedor: document.getElementById('alertaContenedor'),
+            listaRecurrentes: document.getElementById('listaRecurrentes')
         };
     },
 
@@ -35,10 +40,12 @@ const NexusApp = {
         const hoy = new Date().toISOString().split('T')[0];
         this.dom.fecha.value = hoy;
         if(document.getElementById('presFecha')) document.getElementById('presFecha').value = hoy;
+        if(document.getElementById('cuotaFechaInicio')) document.getElementById('cuotaFechaInicio').value = hoy;
     },
 
     loadData() {
         this.state.movimientos = JSON.parse(localStorage.getItem('nexus_gold_v2_data')) || [];
+        this.state.recurrentes = JSON.parse(localStorage.getItem('nexus_gold_v2_recurrentes')) || [];
     },
 
     initListeners() {
@@ -55,6 +62,89 @@ const NexusApp = {
             this.state.filtroBusqueda = e.target.value.toLowerCase();
             this.renderHistorial();
         });
+    },
+
+    abrirModalRecurrentes() {
+        this.renderRecurrentesList();
+        this.abrirModal('modalRecurrente');
+    },
+
+    agregarRecurrente() {
+        const d = document.getElementById('recDesc').value.toUpperCase();
+        const m = parseFloat(document.getElementById('recMonto').value);
+        const div = document.getElementById('recDivisa').value;
+
+        if(!d || isNaN(m)) return;
+
+        const nuevoRec = {
+            id: Date.now(),
+            desc: d,
+            monto: m,
+            divisa: div,
+            ultimoMesProcesado: "" 
+        };
+
+        this.state.recurrentes.push(nuevoRec);
+        document.getElementById('recDesc').value = '';
+        document.getElementById('recMonto').value = '';
+        
+        this.syncRecurrentes();
+        this.procesarRecurrentes();
+        this.renderRecurrentesList();
+    },
+
+    eliminarRecurrente(id) {
+        if(!confirm("¿Detener este pago mensual? Los registros ya creados se mantendrán.")) return;
+        this.state.recurrentes = this.state.recurrentes.filter(r => r.id !== id);
+        this.syncRecurrentes();
+        this.renderRecurrentesList();
+    },
+
+    procesarRecurrentes() {
+        const hoy = new Date();
+        const mesActualKey = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
+        let cambios = false;
+
+        this.state.recurrentes.forEach(rec => {
+            if (rec.ultimoMesProcesado !== mesActualKey) {
+                const fechaRegistro = `${mesActualKey}-05`; 
+                
+                this.state.movimientos.push({
+                    id: Date.now() + Math.random(),
+                    desc: `[FIJO] ${rec.desc}`,
+                    monto: rec.monto,
+                    tipo: 'gasto',
+                    divisa: rec.divisa,
+                    estado: 'adeudado',
+                    fecha: fechaRegistro,
+                    esPrestamo: false
+                });
+
+                rec.ultimoMesProcesado = mesActualKey;
+                cambios = true;
+            }
+        });
+
+        if (cambios) this.sync();
+    },
+
+    renderRecurrentesList() {
+        if(!this.dom.listaRecurrentes) return;
+        this.dom.listaRecurrentes.innerHTML = this.state.recurrentes.map(r => `
+            <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
+                <div>
+                    <p class="text-[10px] font-black text-white">${r.desc}</p>
+                    <p class="text-[9px] text-blue-400 font-bold">${r.divisa} ${r.monto.toLocaleString()}/mes</p>
+                </div>
+                <button onclick="NexusApp.eliminarRecurrente(${r.id})" class="text-red-500 opacity-50 hover:opacity-100 p-2">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `).join('') || '<p class="text-[9px] text-center opacity-30 py-4">No hay pagos mensuales activos</p>';
+    },
+
+    syncRecurrentes() {
+        localStorage.setItem('nexus_gold_v2_recurrentes', JSON.stringify(this.state.recurrentes));
     },
 
     renderContextMenu(x, y) {
@@ -105,6 +195,56 @@ const NexusApp = {
         this.state.movimientos.push({ id: Date.now(), desc: `PRÉSTAMO: ${n}`, monto: m, tipo: tipo, divisa: divisa, estado: 'adeudado', fecha: f, esPrestamo: true });
         this.cerrarModal('modalPrestamo');
         this.sync();
+    },
+
+    registrarCuotas() {
+        const desc = document.getElementById('cuotaDesc').value.toUpperCase();
+        const montoCuota = parseFloat(document.getElementById('cuotaValorIndividual').value); 
+        const cant = parseInt(document.getElementById('cuotaCantidad').value);
+        const fechaInicio = document.getElementById('cuotaFechaInicio').value;
+        const divisa = document.getElementById('cuotaDivisa').value;
+
+        if (!desc || isNaN(montoCuota) || isNaN(cant) || cant <= 0) return;
+
+        const grupoId = Date.now();
+        let fechaBase = new Date(fechaInicio + "T00:00:00");
+
+        for (let i = 1; i <= cant; i++) {
+            const fStr = fechaBase.toISOString().split('T')[0];
+            this.state.movimientos.push({
+                id: grupoId + i,
+                grupoId: grupoId,
+                desc: `${desc} (CUOTA ${i}/${cant})`,
+                monto: montoCuota,
+                tipo: 'gasto',
+                divisa: divisa,
+                estado: 'adeudado',
+                fecha: fStr,
+                esPrestamo: false
+            });
+            fechaBase.setMonth(fechaBase.getMonth() + 1);
+        }
+
+        this.cerrarModal('modalCuotas');
+        this.sync();
+    },
+
+    toggleGrupo(grupoId) {
+        if (this.state.gruposAbiertos.has(grupoId)) {
+            this.state.gruposAbiertos.delete(grupoId);
+        } else {
+            this.state.gruposAbiertos.add(grupoId);
+        }
+        this.renderHistorial();
+    },
+
+    toggleDia(fecha) {
+        if (this.state.diasAbiertos.has(fecha)) {
+            this.state.diasAbiertos.delete(fecha);
+        } else {
+            this.state.diasAbiertos.add(fecha);
+        }
+        this.renderHistorial();
     },
 
     abrirPagoParcial(id) {
@@ -167,10 +307,103 @@ const NexusApp = {
     },
 
     renderHistorial() {
-        let filtrados = this.state.tabActual === 'prestamos' ? this.state.movimientos.filter(m => m.estado === 'adeudado') : this.state.movimientos;
-        if (this.state.filtroBusqueda) filtrados = filtrados.filter(m => m.desc.toLowerCase().includes(this.state.filtroBusqueda));
         const hoy = new Date().toISOString().split('T')[0];
-        this.dom.historial.innerHTML = filtrados.sort((a,b) => b.fecha.localeCompare(a.fecha) || b.id - a.id).map(m => `
+        let filtrados = [];
+        
+        if (this.state.tabActual === 'hoy') {
+            filtrados = this.state.movimientos.filter(m => m.fecha === hoy);
+        } else {
+            filtrados = this.state.movimientos;
+        }
+
+        if (this.state.filtroBusqueda) {
+            filtrados = filtrados.filter(m => m.desc.toLowerCase().includes(this.state.filtroBusqueda));
+        }
+        
+        const ordenados = filtrados.sort((a,b) => b.fecha.localeCompare(a.fecha) || b.id - a.id);
+        
+        // Agrupar por fechas
+        const gruposPorFecha = ordenados.reduce((acc, curr) => {
+            if (!acc[curr.fecha]) acc[curr.fecha] = [];
+            acc[curr.fecha].push(curr);
+            return acc;
+        }, {});
+
+        let html = "";
+        
+        // Si es la pestaña "HOY", renderizamos directo sin acordeón de fecha
+        if (this.state.tabActual === 'hoy') {
+            html = this.renderContenidoLista(ordenados, hoy);
+        } else {
+            // Vista "TODO" agrupada por fechas
+            Object.keys(gruposPorFecha).forEach(fecha => {
+                const itemsDelDia = gruposPorFecha[fecha];
+                const estaAbierto = this.state.diasAbiertos.has(fecha);
+                const fechaLegible = fecha.split('-').reverse().join('/');
+                const esHoy = fecha === hoy;
+
+                html += `
+                    <div class="day-group mb-4">
+                        <div onclick="NexusApp.toggleDia('${fecha}')" class="flex items-center justify-between cursor-pointer p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-all mb-2">
+                            <div class="flex items-center gap-3">
+                                <i class="fas ${estaAbierto ? 'fa-chevron-down' : 'fa-chevron-right'} text-[10px] text-blue-500"></i>
+                                <span class="text-[10px] font-black uppercase tracking-widest ${esHoy ? 'text-blue-400' : 'text-slate-400'}">
+                                    ${esHoy ? 'HOY - ' : ''}${fechaLegible}
+                                </span>
+                            </div>
+                            <span class="text-[9px] font-bold opacity-40">${itemsDelDia.length} REGISTROS</span>
+                        </div>
+                        <div class="${estaAbierto ? 'block' : 'hidden'} space-y-2 pl-2 border-l-2 border-white/5 ml-4">
+                            ${this.renderContenidoLista(itemsDelDia, hoy)}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        this.dom.historial.innerHTML = html || '<div class="opacity-10 py-10 text-center text-xs">LISTA VACÍA</div>';
+    },
+
+    renderContenidoLista(lista, hoy) {
+        let html = "";
+        const gruposProcesados = new Set();
+
+        lista.forEach(m => {
+            if (m.grupoId && !gruposProcesados.has(m.grupoId)) {
+                gruposProcesados.add(m.grupoId);
+                const itemsGrupo = lista.filter(x => x.grupoId === m.grupoId);
+                const montoCuota = itemsGrupo[0].monto; 
+                const estaAbierto = this.state.gruposAbiertos.has(m.grupoId);
+                const nombreBase = m.desc.split('(')[0].trim();
+
+                html += `
+                    <div class="group-container mb-2">
+                        <div onclick="NexusApp.toggleGrupo(${m.grupoId})" class="history-item cursor-pointer border-l-4 border-yellow-500 bg-yellow-500/5">
+                            <div class="flex items-center gap-3">
+                                <i class="fas ${estaAbierto ? 'fa-chevron-down' : 'fa-chevron-right'} text-[8px] opacity-50"></i>
+                                <div>
+                                    <p class="text-[10px] font-black uppercase">${nombreBase} (PLAN CUOTAS)</p>
+                                    <p class="text-[8px] opacity-30 font-bold">${itemsGrupo.filter(x => x.estado==='adeudado').length} PENDIENTES</p>
+                                </div>
+                            </div>
+                            <span class="font-black text-[11px] text-yellow-500">
+                                ${m.divisa === 'USD' ? 'u$s' : '$'} ${montoCuota.toLocaleString()} c/u
+                            </span>
+                        </div>
+                        <div class="${estaAbierto ? 'block' : 'hidden'} ml-4 mt-1 space-y-1 border-l border-white/10 pl-2">
+                            ${itemsGrupo.map(cuota => this.renderItemHTML(cuota, hoy)).join('')}
+                        </div>
+                    </div>
+                `;
+            } else if (!m.grupoId) {
+                html += this.renderItemHTML(m, hoy);
+            }
+        });
+        return html;
+    },
+
+    renderItemHTML(m, hoy) {
+        return `
             <div class="history-item ${m.estado === 'adeudado' ? 'item-debt' : 'item-paid'}" data-id="${m.id}">
                 <div>
                     <p class="text-[10px] font-black uppercase flex items-center gap-2">${m.desc} ${m.fecha > hoy ? '<i class="fas fa-clock text-blue-400"></i>' : ''}</p>
@@ -186,7 +419,7 @@ const NexusApp = {
                         <button onclick="NexusApp.state.idActivo=${m.id}; NexusApp.eliminarRegistro()" class="mini-action-btn text-red-400"><i class="fas fa-trash"></i></button>
                     </div>
                 </div>
-            </div>`).join('') || '<div class="opacity-10 py-10 text-center text-xs">LISTA VACÍA</div>';
+            </div>`;
     },
 
     verificarVencimientos() {
@@ -213,9 +446,7 @@ const NexusApp = {
                     </div>
                     <button onclick="NexusApp.filtrarVencimientos('${mañanaISO}')" class="bg-orange-500 text-white text-[9px] font-black px-3 py-2 rounded-lg hover:bg-orange-400 transition-colors">VER DETALLES</button>
                 </div>`;
-        } else { 
-            this.dom.alertaContenedor.innerHTML = ''; 
-        }
+        } else { this.dom.alertaContenedor.innerHTML = ''; }
     },
 
     filtrarVencimientos(fecha) {
